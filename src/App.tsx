@@ -1,49 +1,67 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import axios from 'axios';
+import { useNavigate  } from 'react-router-dom';
 
+import { getCoinRanking } from './api';
 import Table from './components/Table';
-import Detail from './components/Detail';
+import { ICoinDetail } from './Interface/CoinDetail';
 
-import getData from './assets/mock.json';
+type key = 'price' | 'marketCap' | 'change';
 
 const App: React.FC = () => {
-  const [data, setData] = useState(getData.coins);
+  const navigate = useNavigate();
+
+  const [dataSearch, setDataSearch] = useState<Array<ICoinDetail>>([]);
+  const [data, setData] = useState<Array<ICoinDetail>>([]);
   const [sortType, setSortType] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [postsPerPage, setPostsPerPage] = useState(1);
+  const [postsPerPage, setPostsPerPage] = useState(10);
 
   // get Current post
   const indexOfLastPost = currentPage * postsPerPage;
   const indexOfFirstPost = indexOfLastPost - postsPerPage;
   const currentPosts = data.slice(indexOfFirstPost, indexOfLastPost);
 
-  //change page 
+  const fetchData = async () => {
+    const response = await getCoinRanking();
+
+    if (response) {
+      setData(response.coins);
+      setDataSearch(response.coins);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const paginate = (pageNumber: number) => {
       setCurrentPage(pageNumber);
   }
 
-
-  const  columns: string[] = useMemo(() => ['Name', 'Symbol', 'Logo', 'Current Price', 'Market Cap', 'Changes'], []);
+  const columns: string[] = useMemo(() => ['Name', 'Symbol', 'Logo', 'Current Price', 'Market Cap', 'Changes'], []);
 
   const onSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setCurrentPage(1);
-    setPostsPerPage(3)
     if (!event.target.value) {
-      setData(getData.coins);
+      fetchData();
     } else {
-      const newData = getData.coins.filter(item => item.name.toLocaleLowerCase().includes(event.target.value.toLocaleLowerCase()));
+      const newData = dataSearch.filter(item => item.name.toLocaleLowerCase().includes(event.target.value.toLocaleLowerCase()));
       setData(newData);
     }
   }
 
-  const onColumnSort = (index: number = 3) => {
-    const key = {
-      3: 'price',
-      4: 'marketCap',
-      5: 'change',
-    }[index];
+  const onColumnSort = (index: number) => {
+    let key: key;
 
-    const newData = getData.coins.sort((a, b) => +a[key] > +b[key] ? 1 : -1 );
+    switch(index) {
+      case 4: key = 'marketCap'; break;
+      case 5: key = 'change'; break;
+      default: key = 'price'; break;
+    }
+
+    const newData = dataSearch.sort((a: ICoinDetail, b: ICoinDetail) => {
+        return +a[key] > +b[key] ? 1 : -1;
+    } );
   
     if (sortType) {
       newData.reverse();
@@ -53,12 +71,14 @@ const App: React.FC = () => {
     setData(newData);
   }
 
+  const onCoinDetail = (uuid: string) => {
+    navigate(`/coin/${uuid}`)
+  }
+
   return (
     <div className="min-h-scree text-gray-900">
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        <div className="">
-          <h1 className="text-xl font-semibold">Front - End Exam  = ❤</h1>
-        </div>
+        <h1 className="text-xl font-semibold">Front - End Testing = ❤</h1>
         <div className="mt-6">
           <Table
             currentPosts={currentPosts}
@@ -69,8 +89,8 @@ const App: React.FC = () => {
             columns={columns} 
             data={data}
             onColumnSort={onColumnSort}
+            onCoinDetail={onCoinDetail}
           />
-          {/* <Detail /> */}
         </div>
       </main>
     </div>
