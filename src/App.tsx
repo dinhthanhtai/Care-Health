@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useNavigate  } from 'react-router-dom';
 
+import useDebounce from './utils/useDebounce';
 import { getCoinRanking } from './api';
 import Table from './components/Table';
 import { ICoinDetail } from './Interface/CoinDetail';
@@ -15,6 +16,8 @@ const App: React.FC = () => {
   const [sortType, setSortType] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [postsPerPage, setPostsPerPage] = useState(10);
+  const [valueSearch, setValueSearch] = useState('');
+  const debounceValue = useDebounce(valueSearch);
 
   // get Current post
   const indexOfLastPost = currentPage * postsPerPage;
@@ -31,8 +34,13 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (!debounceValue) {
+      fetchData();
+    } else {
+      const newData = dataSearch.filter(item => item.name.toLocaleLowerCase().includes(debounceValue.toLocaleLowerCase()));
+      setData(newData);
+    }
+  }, [debounceValue])
 
   const paginate = (pageNumber: number) => {
       setCurrentPage(pageNumber);
@@ -41,13 +49,9 @@ const App: React.FC = () => {
   const columns: string[] = useMemo(() => ['Name', 'Symbol', 'Logo', 'Current Price', 'Market Cap', 'Changes'], []);
 
   const onSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = event.target;
     setCurrentPage(1);
-    if (!event.target.value) {
-      fetchData();
-    } else {
-      const newData = dataSearch.filter(item => item.name.toLocaleLowerCase().includes(event.target.value.toLocaleLowerCase()));
-      setData(newData);
-    }
+    setValueSearch(value);
   }
 
   const onColumnSort = (index: number) => {
